@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NDesk.Options;
+using System.Net;
 
 namespace wotd
 {
@@ -15,6 +16,10 @@ namespace wotd
             DateTime date = DateTime.Today.AddDays(-1);
             bool dateParsed;
             bool showHelp = false;
+            string wordToFind = "";
+
+            // TODO: Add it as a command line parameter.
+            DateTime datePast = DateTime.Today.AddYears(-1);
 
             OptionSet options = new OptionSet
             {
@@ -28,6 +33,11 @@ namespace wotd
                         if(dateParsed)
                             date = temp;
                     }
+                },
+                {
+                    "f|find=",
+                    "The {WORD} to find.",
+                    v => wordToFind = v
                 },
                 { 
                     "h|help",  
@@ -55,7 +65,10 @@ namespace wotd
                 return;
             }
 
-            ShowWords(date);
+            if (string.IsNullOrWhiteSpace(wordToFind))
+                ShowWords(date);
+            else
+                SearchForWord(wordToFind, datePast);
         }
 
         private static void ShowWords(DateTime date)
@@ -64,20 +77,72 @@ namespace wotd
 
             foreach (var word in results)
             {
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.Write(word.Word);
-                Console.ResetColor();
-                Console.WriteLine(" ({0})", word.Index);
-                Console.Write(word.Comment);
-                Console.WriteLine();
-                Console.WriteLine();
+                Print(word);
             }
+        }
+
+        // TODO: Debug cache
+
+        private static void SearchForWord(string word, DateTime datePast)
+        {
+            DateTime date = DateTime.Today;
+            var scrapper = new HtmlScrapper();
+            var htmlDonwloader = new HtmlDownloader();
+            var cache = new Cache();
+
+            while (date >= datePast)
+            {
+                try
+                {
+                    List<WordInfo> results = new List<WordInfo>();
+
+                    List<WordInfo> cachedResults = cache.Get(date);
+
+                    if (cachedResults.Count == 0)
+                    {
+                        results = scrapper.GetWords(htmlDonwloader.GetHtml(date));
+                        cache.Store(results, date);
+                    }
+                    else
+                        results = cachedResults;
+
+                    Console.Write("\rChecking for: {0:yyyy-MM-dd}", date);
+                    foreach (var result in results)
+                    {
+                        if (result.Word.Contains(word, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            Console.WriteLine();
+                            Print(result);
+                        }
+                    }
+                    date = date.AddDays(-1);
+                }
+                catch (WebException ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                    cache.Serialize();
+                    break;
+                }
+            }
+
+            cache.Serialize();
+        }
+
+        static void Print(WordInfo word)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.Write(word.Word);
+            Console.ResetColor();
+            Console.WriteLine(" ({0})", word.Index);
+            Console.Write(word.Comment);
+            Console.WriteLine();
+            Console.WriteLine();
         }
 
         static void ShowHelp(OptionSet p)
         {
             Console.WriteLine("Usage: {0} [OPTIONS]", programName);
-            Console.WriteLine("Opis...");
+            Console.WriteLine("Shows Polish words of the day. See www.nkjp.pl for more information.");
             Console.WriteLine();
             Console.WriteLine("Options:");
             p.WriteOptionDescriptions(Console.Out);

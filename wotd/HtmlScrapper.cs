@@ -35,11 +35,15 @@ namespace wotd
 
             for (int i = 0; i < words.Count; i++)
             {
+                string word = i < words.Count ? words[i] : "";
+                string index = i < importance.Count ? importance[i] : "";
+                string comment = i< comments.Count ? comments[i] : "";
+
                 result.Add(new WordInfo 
                 { 
-                    Word = words[i],
-                    Index = importance[i],
-                    Comment = comments[i]
+                    Word = word,
+                    Index = index,
+                    Comment = comment
                 });
             }
 
