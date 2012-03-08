@@ -9,7 +9,9 @@ namespace wotd
 {
     public class Cache
     {
-        private Dictionary<DateTime, List<WordInfo>> cache;
+        private Type T = typeof(List<WordsOfTheDay>);
+
+        private List<WordsOfTheDay> cache = new List<WordsOfTheDay>();
 
         string path = "words.xml";
 
@@ -17,13 +19,14 @@ namespace wotd
         {
             if (!File.Exists(path))
                 File.Create(path);
-
-            Deserialize();
+            
+            if(!string.IsNullOrWhiteSpace(File.ReadAllText(path)))
+                Deserialize();
         }
 
         public void Serialize()
         {
-             var serializer = new XmlSerializer(typeof(Dictionary<DateTime, List<WordInfo>>));
+             var serializer = new XmlSerializer(T);
 
             using (TextWriter writeFileStream = new StreamWriter(path))
             {
@@ -34,26 +37,29 @@ namespace wotd
 
         private void Deserialize()
         {
-            var serializer = new XmlSerializer(typeof(Dictionary<DateTime, List<WordInfo>>));
+            var serializer = new XmlSerializer(T);
 
             using (var reader = new StreamReader(path))
             {
-                cache = (Dictionary<DateTime, List<WordInfo>>)serializer.Deserialize(reader);
+                cache = (List<WordsOfTheDay>)serializer.Deserialize(reader);
                 reader.Close();
             }
         }
 
         public List<WordInfo> Get(DateTime date)
         {
-            if(cache.ContainsKey(date))
-                return cache[date];
-            else
+            var result = cache.SingleOrDefault(x => x.Date.Date == date.Date);
+
+            if (result == null)
                 return null;
+            else
+                return result.Words;
+
         }
 
         public void Store(List<WordInfo> words, DateTime date)
         {
-             cache[date] = words;
+            cache.Add(new WordsOfTheDay { Date = date, Words = words });
         }
     }
 }

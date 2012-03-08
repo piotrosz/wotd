@@ -98,10 +98,14 @@ namespace wotd
 
                     List<WordInfo> cachedResults = cache.Get(date);
 
-                    if (cachedResults.Count == 0)
+                    if (cachedResults == null)
                     {
                         results = scrapper.GetWords(htmlDonwloader.GetHtml(date));
-                        cache.Store(results, date);
+                        if (results.Count > 0)
+                        {
+                            cache.Store(results, date);
+                            cache.Serialize();
+                        }
                     }
                     else
                         results = cachedResults;
