@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using NDesk.Options;
 using System.Net;
+using NDesk.Options;
 
 namespace wotd
 {
@@ -11,15 +11,20 @@ namespace wotd
     {
         const string programName = "";
 
+        static HtmlScrapper scrapper = new HtmlScrapper();
+        static HtmlDownloader downloader = new HtmlDownloader();
+        static Cache cache = new Cache();
+
         static void Main(string[] args)
         {
             DateTime date = DateTime.Today.AddDays(-1);
             bool dateParsed;
             bool showHelp = false;
             string wordToFind = "";
+            bool searchInDescriptions = false;
 
-            // TODO: Add it as a command line parameter.
-            DateTime datePast = DateTime.Today.AddYears(-1);
+            // This is the earliest date for which data is available
+            DateTime datePast = new DateTime(2010, 12, 11);
 
             OptionSet options = new OptionSet
             {
@@ -34,6 +39,11 @@ namespace wotd
                             date = temp;
                     }
                 },
+				{
+					"e|description",
+					"Search in descriptions also",
+					v => searchInDescriptions = v != null
+				},
                 {
                     "f|find=",
                     "The {WORD} to find.",
@@ -68,52 +78,49 @@ namespace wotd
             if (string.IsNullOrWhiteSpace(wordToFind))
                 ShowWords(date);
             else
-                SearchForWord(wordToFind, datePast);
+                SearchForWord(wordToFind, datePast, searchInDescriptions);
         }
 
         private static void ShowWords(DateTime date)
         {
-            var results = new HtmlScrapper().GetWords(new HtmlDownloader().GetHtml(date));
+            List<WordInfo> results = cache.Get(date);
+
+            if (results == null)
+            {
+                results = scrapper.GetWords(downloader.GetHtml(date));
+
+                StoreInCache(results, date);
+            }
 
             foreach (var word in results)
-            {
                 Print(word);
-            }
         }
 
-        // TODO: Debug cache
-
-        private static void SearchForWord(string word, DateTime datePast)
+        private static void SearchForWord(string word, DateTime datePast, bool searchInDescriptions)
         {
-            DateTime date = DateTime.Today;
-            var scrapper = new HtmlScrapper();
-            var htmlDonwloader = new HtmlDownloader();
-            var cache = new Cache();
+            var date = DateTime.Today;
 
             while (date >= datePast)
             {
                 try
                 {
-                    List<WordInfo> results = new List<WordInfo>();
+                    List<WordInfo> results = cache.Get(date);
 
-                    List<WordInfo> cachedResults = cache.Get(date);
-
-                    if (cachedResults == null)
+                    if (results == null)
                     {
-                        results = scrapper.GetWords(htmlDonwloader.GetHtml(date));
-                        if (results.Count > 0)
-                        {
-                            cache.Store(results, date);
-                            cache.Serialize();
-                        }
+                        results = scrapper.GetWords(downloader.GetHtml(date));
+
+                        StoreInCache(results, date);
                     }
-                    else
-                        results = cachedResults;
 
                     Console.Write("\rChecking for: {0:yyyy-MM-dd}", date);
+
                     foreach (var result in results)
                     {
-                        if (result.Word.Contains(word, StringComparison.InvariantCultureIgnoreCase))
+                        if (
+                                result.Word.Contains(word, StringComparison.InvariantCultureIgnoreCase) ||
+                                (searchInDescriptions && result.Comment.Contains(word, StringComparison.InvariantCultureIgnoreCase))
+                            )
                         {
                             Console.WriteLine();
                             Print(result);
@@ -124,12 +131,18 @@ namespace wotd
                 catch (WebException ex)
                 {
                     Console.WriteLine(ex.ToString());
-                    cache.Serialize();
                     break;
                 }
             }
+        }
 
-            cache.Serialize();
+        static void StoreInCache(List<WordInfo> words, DateTime date)
+        {
+            if (words.Count > 0)
+            {
+                cache.Store(words, date);
+                cache.Serialize();
+            }
         }
 
         static void Print(WordInfo word)

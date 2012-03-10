@@ -8,6 +8,6 @@ Checking words for a given day:
 
 ![wotd](http://if.pw.edu.pl/~ludwik/wotd.png)
 
-Seaching for words (in development). Word 'katastrofa' search:
+Seaching for words:
 
-![wotd searching](http://if.pw.edu.pl/~ludwik/wotd_katastrofa.png)
+![wotd searching](http://if.pw.edu.pl/~ludwik/wotd_prezydencja.png)
