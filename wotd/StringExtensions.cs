@@ -11,5 +11,16 @@ namespace wotd
         {
             return source.IndexOf(toCheck, comp) >= 0;
         }
+
+        public static IEnumerable<int> IndexOfAll(this string source, string value)
+        {
+            for (int i = 0; i < (source.Length - value.Length); i++)
+			{
+                if(source.IndexOf(value, i, value.Length, StringComparison.InvariantCultureIgnoreCase) != -1)
+                {
+                    yield return i;
+                }
+			}
+        }
     }
 }

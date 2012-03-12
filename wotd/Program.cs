@@ -93,7 +93,7 @@ namespace wotd
             }
 
             foreach (var word in results)
-                Print(word);
+                Print(word, null);
         }
 
         private static void SearchForWord(string word, DateTime datePast, bool searchInDescriptions)
@@ -123,7 +123,7 @@ namespace wotd
                             )
                         {
                             Console.WriteLine();
-                            Print(result);
+                            Print(result, word);
                         }
                     }
                     date = date.AddDays(-1);
@@ -145,15 +145,43 @@ namespace wotd
             }
         }
 
-        static void Print(WordInfo word)
+        static void Print(WordInfo word, string searchTerm)
         {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write(word.Word);
-            Console.ResetColor();
+            PrintGreen(word.Word);
+
             Console.WriteLine(" ({0})", word.Index);
-            Console.Write(word.Comment);
+
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                Console.Write(word.Comment);
+            }
+            else
+            {
+                var indexOfAll = word.Comment.IndexOfAll(searchTerm);
+
+                for (int i = 0; i < word.Comment.Length; i++)
+                {
+                    if (indexOfAll != null && indexOfAll.Any(x => x == i))
+                    {
+                        PrintGreen(word.Comment.Substring(i, searchTerm.Length));
+                        i += (searchTerm.Length - 1);
+                    }
+                    else
+                    {
+                        Console.Write(word.Comment.Substring(i, 1));
+                    }
+
+                }
+            }
             Console.WriteLine();
             Console.WriteLine();
+        }
+
+        static void PrintGreen(string word)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.Write(word);
+            Console.ResetColor();
         }
 
         static void ShowHelp(OptionSet p)

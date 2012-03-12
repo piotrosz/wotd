@@ -10,4 +10,4 @@ Checking words for a given day:
 
 Seaching for words:
 
-![wotd searching](http://if.pw.edu.pl/~ludwik/wotd_prezydencja.png)
+![wotd searching](http://if.pw.edu.pl/~ludwik/wotd_prezydencja2.png)
