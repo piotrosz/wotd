@@ -11,50 +11,24 @@ namespace wotd
     {
         const string programName = "";
 
+        // This is the earliest date for which data is available
+        static readonly DateTime dateEarliest = new DateTime(2010, 12, 11);
+
         static HtmlScrapper scrapper = new HtmlScrapper();
         static HtmlDownloader downloader = new HtmlDownloader();
         static Cache cache = new Cache();
 
+        static DateTime date = DateTime.Today.AddDays(-1);
+        static bool dateParsed;
+        static bool showHelp = false;
+        static string wordToFind = "";
+        static bool searchInDescriptions = false;
+
+        const int levenshteinDistance = 2;
+
         static void Main(string[] args)
         {
-            DateTime date = DateTime.Today.AddDays(-1);
-            bool dateParsed;
-            bool showHelp = false;
-            string wordToFind = "";
-            bool searchInDescriptions = false;
-
-            // This is the earliest date for which data is available
-            DateTime datePast = new DateTime(2010, 12, 11);
-
-            OptionSet options = new OptionSet
-            {
-                { 
-                    "d|date=",
-                    "The {DATE} in yyyy-MM-dd format.",
-                    v => 
-                    {
-                        DateTime temp = new DateTime();
-                        dateParsed = DateTime.TryParse(v, out temp);
-                        if(dateParsed)
-                            date = temp;
-                    }
-                },
-				{
-					"e|description",
-					"Search in descriptions also",
-					v => searchInDescriptions = v != null
-				},
-                {
-                    "f|find=",
-                    "The {WORD} to find.",
-                    v => wordToFind = v
-                },
-                { 
-                    "h|help",  
-                    "show this message and exit", 
-                    v => showHelp = v != null 
-                }
-            };
+            var options = CreateOptions();
 
             List<string> extra;
             try
@@ -78,7 +52,40 @@ namespace wotd
             if (string.IsNullOrWhiteSpace(wordToFind))
                 ShowWords(date);
             else
-                SearchForWord(wordToFind, datePast, searchInDescriptions);
+                SearchForWord(wordToFind, dateEarliest, searchInDescriptions);
+        }
+
+        private static OptionSet CreateOptions()
+        {
+            return new OptionSet
+            {
+                { 
+                    "d|date=",
+                    "The {DATE} in yyyy-MM-dd format.",
+                    v => 
+                    {
+                        DateTime temp = new DateTime();
+                        dateParsed = DateTime.TryParse(v, out temp);
+                        if(dateParsed)
+                            date = temp;
+                    }
+                },
+                {
+                    "e|description",
+                    "Search in descriptions also",
+                    v => searchInDescriptions = v != null
+                },
+                {
+                    "f|find=",
+                    "The {WORD} to find.",
+                    v => wordToFind = v
+                },
+                { 
+                    "h|help",  
+                    "show this message and exit", 
+                    v => showHelp = v != null 
+                }
+            };
         }
 
         private static void ShowWords(DateTime date)
@@ -119,7 +126,7 @@ namespace wotd
                     {
                         if (
                                 result.Word.Contains(word, StringComparison.InvariantCultureIgnoreCase) ||
-                                (searchInDescriptions && result.Comment.Contains(word, StringComparison.InvariantCultureIgnoreCase))
+                                (searchInDescriptions && result.Comment.ContainsSimilar(word, levenshteinDistance))
                             )
                         {
                             Console.WriteLine();
@@ -157,14 +164,17 @@ namespace wotd
             }
             else
             {
-                var indexOfAll = word.Comment.IndexOfAll(searchTerm);
+                var indexOfAll = word.Comment.IndexOfAllSimilar(searchTerm, levenshteinDistance).ToList();
 
                 for (int i = 0; i < word.Comment.Length; i++)
                 {
-                    if (indexOfAll != null && indexOfAll.Any(x => x == i))
+                    var found = indexOfAll.FirstOrDefault(x => x.Item1 == i);
+
+                    if (found != null)
                     {
-                        PrintGreen(word.Comment.Substring(i, searchTerm.Length));
-                        i += (searchTerm.Length - 1);
+                        int length = found.Item2.Length;
+                        PrintGreen(word.Comment.Substring(i, length));
+                        i += (length - 1);
                     }
                     else
                     {
