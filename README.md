@@ -6,8 +6,8 @@ Pokazuje "Słowa dnia" z serwisu www.nkjp.pl. Program umożliwia wyszukiwanie po
 
 Checking words for a given day:
 
-![wotd](http://if.pw.edu.pl/~ludwik/wotd.png)
+![wotd](http://if.pw.edu.pl/~ludwik/images/wotd.png)
 
 Seaching for words:
 
-![wotd searching](http://if.pw.edu.pl/~ludwik/wotd_prezydencja2.png)
+![wotd searching](http://if.pw.edu.pl/~ludwik/images/wotd_prezydencja2.png)
