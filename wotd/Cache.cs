@@ -9,28 +9,33 @@ namespace wotd
 {
     public class Cache
     {
-        private Type T = typeof(List<WordsOfTheDay>);
+        private readonly Type T = typeof(List<WordsOfTheDay>);
 
-        private List<WordsOfTheDay> cache = new List<WordsOfTheDay>();
+        private List<WordsOfTheDay> _cache = new List<WordsOfTheDay>();
 
-        string path = "words.xml";
+        private const string Path = "words.xml";
 
         public Cache()
         {
-            if (!File.Exists(path))
-                File.Create(path);
+            if (!File.Exists(Path))
+            {
+                File.Create(Path);
+            }
             
-            if(!string.IsNullOrWhiteSpace(File.ReadAllText(path)))
+            if (!string.IsNullOrWhiteSpace(File.ReadAllText(Path)))
+            {
                 Deserialize();
+            }
+                
         }
 
         public void Serialize()
         {
              var serializer = new XmlSerializer(T);
 
-            using (TextWriter writeFileStream = new StreamWriter(path))
+            using (TextWriter writeFileStream = new StreamWriter(Path))
             {
-                serializer.Serialize(writeFileStream, cache);
+                serializer.Serialize(writeFileStream, _cache);
                 writeFileStream.Close();
             } 
         }
@@ -39,27 +44,28 @@ namespace wotd
         {
             var serializer = new XmlSerializer(T);
 
-            using (var reader = new StreamReader(path))
+            using (var reader = new StreamReader(Path))
             {
-                cache = (List<WordsOfTheDay>)serializer.Deserialize(reader);
+                _cache = (List<WordsOfTheDay>)serializer.Deserialize(reader);
                 reader.Close();
             }
         }
 
         public List<WordInfo> Get(DateTime date)
         {
-            var result = cache.SingleOrDefault(x => x.Date.Date == date.Date);
+            var result = _cache.SingleOrDefault(x => x.Date.Date == date.Date);
 
             if (result == null)
+            {
                 return null;
-            else
-                return result.Words;
-
+            }
+                
+            return result.Words;
         }
 
         public void Store(List<WordInfo> words, DateTime date)
         {
-            cache.Add(new WordsOfTheDay { Date = date, Words = words });
+            _cache.Add(new WordsOfTheDay { Date = date, Words = words });
         }
     }
 }

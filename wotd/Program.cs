@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Net;
 using NDesk.Options;
 
@@ -9,50 +8,49 @@ namespace wotd
 {
     class Program
     {
-        const string programName = "";
+        const string ProgramName = "";
 
         // This is the earliest date for which data is available
         static readonly DateTime dateEarliest = new DateTime(2010, 12, 11);
 
-        static HtmlScrapper scrapper = new HtmlScrapper();
-        static HtmlDownloader downloader = new HtmlDownloader();
-        static Cache cache = new Cache();
+        static readonly HtmlScrapper Scrapper = new HtmlScrapper();
+        static readonly HtmlDownloader Downloader = new HtmlDownloader();
+        static readonly Cache Cache = new Cache();
 
-        static DateTime date = DateTime.Today.AddDays(-1);
-        static bool dateParsed;
-        static bool showHelp = false;
-        static string wordToFind = "";
-        static bool searchInDescriptions = false;
+        static DateTime _date = DateTime.Today.AddDays(-1);
+        static bool _dateParsed;
+        static bool _showHelp = false;
+        static string _wordToFind = "";
+        static bool _searchInDescriptions = false;
 
-        const int levenshteinDistance = 2;
+        const int LevenshteinDistance = 2;
 
         static void Main(string[] args)
         {
             var options = CreateOptions();
 
-            List<string> extra;
             try
             {
-                extra = options.Parse(args);
+                options.Parse(args);
             }
             catch (OptionException e)
             {
-                Console.Write("{0}: ", programName);
+                Console.Write("{0}: ", ProgramName);
                 Console.WriteLine(e.Message);
-                Console.WriteLine("Try '{0} --help' for more information.", programName);
+                Console.WriteLine("Try '{0} --help' for more information.", ProgramName);
                 return;
             }
 
-            if (showHelp)
+            if (_showHelp)
             {
                 ShowHelp(options);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(wordToFind))
-                ShowWords(date);
+            if (string.IsNullOrWhiteSpace(_wordToFind))
+                ShowWords(_date);
             else
-                SearchForWord(wordToFind, dateEarliest, searchInDescriptions);
+                SearchForWord(_wordToFind, dateEarliest, _searchInDescriptions);
         }
 
         private static OptionSet CreateOptions()
@@ -64,37 +62,39 @@ namespace wotd
                     "The {DATE} in yyyy-MM-dd format.",
                     v => 
                     {
-                        DateTime temp = new DateTime();
-                        dateParsed = DateTime.TryParse(v, out temp);
-                        if(dateParsed)
-                            date = temp;
+                        var temp = new DateTime();
+                        _dateParsed = DateTime.TryParse(v, out temp);
+                        if (_dateParsed)
+                        {
+                            _date = temp;
+                        }
                     }
                 },
                 {
                     "e|description",
                     "Search in descriptions also",
-                    v => searchInDescriptions = v != null
+                    v => _searchInDescriptions = v != null
                 },
                 {
                     "f|find=",
                     "The {WORD} to find.",
-                    v => wordToFind = v
+                    v => _wordToFind = v
                 },
                 { 
                     "h|help",  
                     "show this message and exit", 
-                    v => showHelp = v != null 
+                    v => _showHelp = v != null 
                 }
             };
         }
 
         private static void ShowWords(DateTime date)
         {
-            List<WordInfo> results = cache.Get(date);
+            List<WordInfo> results = Cache.Get(date);
 
             if (results == null)
             {
-                results = scrapper.GetWords(downloader.GetHtml(date));
+                results = Scrapper.GetWords(Downloader.GetHtml(date));
 
                 StoreInCache(results, date);
             }
@@ -111,12 +111,11 @@ namespace wotd
             {
                 try
                 {
-                    List<WordInfo> results = cache.Get(date);
+                    List<WordInfo> results = Cache.Get(date);
 
                     if (results == null)
                     {
-                        results = scrapper.GetWords(downloader.GetHtml(date));
-
+                        results = Scrapper.GetWords(Downloader.GetHtml(date));
                         StoreInCache(results, date);
                     }
 
@@ -126,7 +125,7 @@ namespace wotd
                     {
                         if (
                                 result.Word.Contains(word, StringComparison.InvariantCultureIgnoreCase) ||
-                                (searchInDescriptions && result.Comment.ContainsSimilar(word, levenshteinDistance))
+                                (searchInDescriptions && result.Comment.ContainsSimilar(word, LevenshteinDistance))
                             )
                         {
                             Console.WriteLine();
@@ -147,8 +146,8 @@ namespace wotd
         {
             if (words.Count > 0)
             {
-                cache.Store(words, date);
-                cache.Serialize();
+                Cache.Store(words, date);
+                Cache.Serialize();
             }
         }
 
@@ -164,7 +163,7 @@ namespace wotd
             }
             else
             {
-                var indexOfAll = word.Comment.IndexOfAllSimilar(searchTerm, levenshteinDistance).ToList();
+                var indexOfAll = word.Comment.IndexOfAllSimilar(searchTerm, LevenshteinDistance).ToList();
 
                 for (int i = 0; i < word.Comment.Length; i++)
                 {
@@ -196,7 +195,7 @@ namespace wotd
 
         static void ShowHelp(OptionSet p)
         {
-            Console.WriteLine("Usage: {0} [OPTIONS]", programName);
+            Console.WriteLine("Usage: {0} [OPTIONS]", ProgramName);
             Console.WriteLine("Shows Polish words of the day. See www.nkjp.pl for more information.");
             Console.WriteLine();
             Console.WriteLine("Options:");
